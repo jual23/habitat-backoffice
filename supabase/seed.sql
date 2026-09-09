@@ -1,0 +1,41 @@
+-- T015 (adapted): reference seed data for manual/local exploration of the Habitat
+-- backoffice against the live project's actual schema (buildings/apartments/
+-- profiles/user_roles — see specs/001-building-backoffice/SCHEMA-ADAPTATION.md).
+--
+-- This project has no local Supabase stack (no Docker/CLI available in the dev
+-- environment this feature was built in — see the implementation checkpoint
+-- report), and the backing database is the shared, constitutionally-pinned
+-- "Habitat" project, not a disposable local one. Running this script directly
+-- against that project would create fake login accounts in a shared database,
+-- so it is NOT run automatically and is provided as a reference/starting point
+-- only. Prefer tests/fixtures.ts's createTestUser()/createTestBuilding() for
+-- automated tests (throwaway rows, cleaned up per test run) or a disposable
+-- Supabase project of your own for manual exploration.
+--
+-- If you do run this against a project you control, note that inserting into
+-- auth.users directly (rather than via supabase.auth.admin.createUser()) is a
+-- separate concern this script does not attempt — use the Admin API for real
+-- sign-in-able accounts, then the statements below to attach roles/apartments.
+
+-- Example shape (run only against a disposable project, after creating the
+-- referenced auth users via the Admin API and substituting their real ids):
+--
+-- insert into buildings (id, name) values
+--   ('00000000-0000-0000-0000-00000000000a', 'Building A'),
+--   ('00000000-0000-0000-0000-00000000000b', 'Building B');
+--
+-- insert into apartments (building_id, tower, unit_number, floor) values
+--   ('00000000-0000-0000-0000-00000000000a', null, '1A', 1),
+--   ('00000000-0000-0000-0000-00000000000a', null, '1B', 1),
+--   ('00000000-0000-0000-0000-00000000000b', null, '1A', 1);
+--
+-- -- Replace with real auth.users ids created via supabase.auth.admin.createUser():
+-- insert into user_roles (user_id, role, building_id) values
+--   ('<app-admin-user-id>', 'app_admin', null),
+--   ('<building-a-admin-user-id>', 'building_admin', '00000000-0000-0000-0000-00000000000a'),
+--   ('<building-a-staff-user-id>', 'staff', '00000000-0000-0000-0000-00000000000a'),
+--   ('<building-b-admin-user-id>', 'building_admin', '00000000-0000-0000-0000-00000000000b');
+--
+-- update profiles set building_id = '00000000-0000-0000-0000-00000000000a',
+--   apartment_id = (select id from apartments where unit_number = '1A' limit 1)
+--   where id = '<building-a-resident-user-id>';
