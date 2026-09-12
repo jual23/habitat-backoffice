@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 export const apartmentSchema = z.object({
   tower: z.string().trim().max(50).optional().or(z.literal('')).transform((v) => v || null),
-  unit_number: z.string().trim().min(1, 'Unit number is required').max(50),
+  unit_number: z.string().trim().min(1, 'El número de unidad es obligatorio.').max(50),
   floor: z.coerce.number().int().optional().nullable(),
 });
 export type ApartmentInput = z.infer<typeof apartmentSchema>;
@@ -18,9 +18,9 @@ export type ApartmentInput = z.infer<typeof apartmentSchema>;
  * per spec.md's Assumptions.
  */
 export const createResidentSchema = z.object({
-  email: z.string().trim().email('A valid email is required'),
+  email: z.string().trim().email('Se requiere un correo electrónico válido.'),
   full_name: z.string().trim().max(200).optional().or(z.literal('')).transform((v) => v || null),
-  apartment_id: z.string().uuid('An apartment must be selected'),
+  apartment_id: z.string().uuid('Debes seleccionar un apartamento.'),
 });
 export type CreateResidentInput = z.infer<typeof createResidentSchema>;
 
@@ -35,9 +35,9 @@ export const updateResidentSchema = z
   .object({
     email: z.string().trim().email().optional(),
     apartment_id: z.string().uuid().optional(),
-    first_name: z.string().trim().min(1, 'First name cannot be blank').max(200).optional(),
-    last_name: z.string().trim().min(1, 'Last name cannot be blank').max(200).optional(),
-    document_id: z.string().trim().min(1, 'Document ID cannot be blank').max(100).optional(),
+    first_name: z.string().trim().min(1, 'El nombre no puede estar vacío.').max(200).optional(),
+    last_name: z.string().trim().min(1, 'El apellido no puede estar vacío.').max(200).optional(),
+    document_id: z.string().trim().min(1, 'El documento de identidad no puede estar vacío.').max(100).optional(),
   })
   .refine(
     (v) =>
@@ -46,6 +46,6 @@ export const updateResidentSchema = z
       v.first_name !== undefined ||
       v.last_name !== undefined ||
       v.document_id !== undefined,
-    { message: 'Provide at least one field to update' },
+    { message: 'Proporciona al menos un campo para actualizar.' },
   );
 export type UpdateResidentInput = z.infer<typeof updateResidentSchema>;

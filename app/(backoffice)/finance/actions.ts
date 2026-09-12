@@ -14,6 +14,7 @@ import {
   type FinanceSettingsInput,
   type ApprovePaymentInput,
 } from '@/lib/validation/finance';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type BulkResult = ActionResult & { errors?: string[] };
@@ -23,7 +24,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -34,7 +35,7 @@ export async function setApartmentFee(
   input: SetApartmentFeeInput,
 ): Promise<ActionResult> {
   const parsed = setApartmentFeeSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -43,7 +44,7 @@ export async function setApartmentFee(
     .update({ monthly_fee: parsed.data.amount })
     .eq('id', parsed.data.apartment_id)
     .eq('building_id', buildingId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar la cuota.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -86,12 +87,12 @@ export async function bulkSetFees(buildingId: string, csvText: string): Promise<
   for (const row of rows) {
     const parsedRow = bulkFeeCsvRowSchema.safeParse(row);
     if (!parsedRow.success) {
-      errors.push(`${row.apartmentLabel}: ${parsedRow.error.issues[0]?.message ?? 'Invalid row'}`);
+      errors.push(`${row.apartmentLabel}: ${parsedRow.error.issues[0]?.message ?? 'Fila inválida.'}`);
       continue;
     }
     const apartmentId = labelToId.get(parsedRow.data.apartmentLabel);
     if (!apartmentId) {
-      errors.push(`${row.apartmentLabel}: apartment not found in this building`);
+      errors.push(`${row.apartmentLabel}: apartamento no encontrado en este edificio`);
       continue;
     }
     const { error } = await supabase
@@ -100,7 +101,7 @@ export async function bulkSetFees(buildingId: string, csvText: string): Promise<
       .eq('id', apartmentId)
       .eq('building_id', buildingId);
     if (error) {
-      errors.push(`${row.apartmentLabel}: ${error.message}`);
+      errors.push(`${row.apartmentLabel}: ${toFriendlyMessage(error, 'no se pudo actualizar la cuota')}`);
       continue;
     }
     updated++;
@@ -119,7 +120,7 @@ export async function bulkSetFees(buildingId: string, csvText: string): Promise<
 
   revalidatePath('/finance');
   if (updated === 0 && errors.length > 0) {
-    return { ok: false, error: errors[0] ?? 'No rows updated', errors };
+    return { ok: false, error: errors[0] ?? 'No se actualizó ninguna fila.', errors };
   }
   return { ok: true, errors: errors.length > 0 ? errors : undefined };
 }
@@ -136,7 +137,7 @@ export async function approvePayment(
   input: ApprovePaymentInput,
 ): Promise<ActionResult> {
   const parsed = approvePaymentSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -145,7 +146,8 @@ export async function approvePayment(
     .select('id, apartment_id')
     .eq('id', parsed.data.payment_id)
     .maybeSingle();
-  if (fetchError || !payment) return { ok: false, error: fetchError?.message ?? 'Payment not found' };
+  if (fetchError) return { ok: false, error: toFriendlyMessage(fetchError, 'No se pudo cargar el pago.') };
+  if (!payment) return { ok: false, error: 'Pago no encontrado.' };
 
   const { error, count } = await supabase
     .from('payments')
@@ -154,8 +156,8 @@ export async function approvePayment(
       { count: 'exact' },
     )
     .eq('id', parsed.data.payment_id);
-  if (error) return { ok: false, error: error.message };
-  if (count === 0) return { ok: false, error: 'This payment can no longer be approved.' };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo aprobar el pago.') };
+  if (count === 0) return { ok: false, error: 'Este pago ya no puede aprobarse.' };
 
   const { data: residents } = await supabase
     .from('profiles')
@@ -191,7 +193,7 @@ export async function setFinanceSettings(
   input: FinanceSettingsInput,
 ): Promise<ActionResult> {
   const parsed = financeSettingsSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -204,7 +206,7 @@ export async function setFinanceSettings(
       late_fee_amount: parsed.data.late_fee_amount,
     })
     .eq('id', buildingId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar la configuración de finanzas.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,

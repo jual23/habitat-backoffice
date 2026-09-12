@@ -10,17 +10,17 @@ import { z } from 'zod';
  * (independently-enforced) minimum.
  */
 const baseAccountFields = {
-  email: z.string().trim().email('A valid email is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  first_name: z.string().trim().min(1, 'First name is required').max(200),
-  last_name: z.string().trim().min(1, 'Last name is required').max(200),
-  document_id: z.string().trim().min(1, 'Document ID is required').max(100),
+  email: z.string().trim().email('Se requiere un correo electrónico válido.'),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
+  first_name: z.string().trim().min(1, 'El nombre es obligatorio.').max(200),
+  last_name: z.string().trim().min(1, 'El apellido es obligatorio.').max(200),
+  document_id: z.string().trim().min(1, 'El documento de identidad es obligatorio.').max(100),
 };
 
 /** FR-006: Resident creation additionally requires an apartment. */
 export const createResidentAccountSchema = z.object({
   ...baseAccountFields,
-  apartment_id: z.string().uuid('An apartment must be selected'),
+  apartment_id: z.string().uuid('Debes seleccionar un apartamento.'),
 });
 export type CreateResidentAccountInput = z.infer<typeof createResidentAccountSchema>;
 

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getUserContext } from '@/lib/session';
 import { writeAuditLog } from '@/lib/audit';
 import { acknowledgeEmergencySchema, type AcknowledgeEmergencyInput } from '@/lib/validation/emergency';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -13,7 +14,7 @@ async function requireStaffOrAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'staff' && ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -29,7 +30,7 @@ export async function acknowledgeEmergency(
   input: AcknowledgeEmergencyInput,
 ): Promise<ActionResult> {
   const parsed = acknowledgeEmergencySchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireStaffOrAdmin();
 
@@ -40,8 +41,8 @@ export async function acknowledgeEmergency(
       { count: 'exact' },
     )
     .eq('id', parsed.data.emergency_id);
-  if (error) return { ok: false, error: error.message };
-  if (count === 0) return { ok: false, error: 'This emergency was already handled.' };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar la emergencia.') };
+  if (count === 0) return { ok: false, error: 'Esta emergencia ya fue atendida.' };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,

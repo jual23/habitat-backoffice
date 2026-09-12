@@ -7,6 +7,7 @@ import { writeAuditLog } from '@/lib/audit';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { createBuildingUser } from '@/lib/user-provisioning';
 import { createStaffAccountSchema, type CreateStaffAccountInput } from '@/lib/validation/users';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -14,7 +15,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || ctx.role !== 'building_admin') {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -33,10 +34,10 @@ export async function createStaff(
   input: CreateStaffAccountInput,
 ): Promise<ActionResult> {
   const parsed = createStaffAccountSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
-  if (!ctx.buildingId) return { ok: false, error: 'Not authorized' };
+  if (!ctx.buildingId) return { ok: false, error: 'No autorizado.' };
 
   const result = await createBuildingUser({
     adminClient: getAdminClient(),
@@ -76,7 +77,7 @@ export async function deleteStaff(userRoleId: string, buildingId: string): Promi
   const { supabase, ctx } = await requireBuildingAdmin();
 
   const { error } = await supabase.from('user_roles').delete().eq('id', userRoleId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo eliminar el personal.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -98,7 +99,7 @@ export async function cancelStaffInvitation(
   const { supabase, ctx } = await requireBuildingAdmin();
 
   const { error } = await supabase.from('invitations').delete().eq('id', invitationId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo cancelar la invitación.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,

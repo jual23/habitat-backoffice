@@ -14,6 +14,7 @@ import {
   type UpdateTemplateInput,
   type SetStaffBroadcastPermissionInput,
 } from '@/lib/validation/broadcast';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -21,7 +22,7 @@ async function requireStaffOrAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'staff' && ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -31,7 +32,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -44,7 +45,7 @@ async function requireBuildingAdmin() {
  */
 export async function sendBroadcast(buildingId: string, input: SendBroadcastInput): Promise<ActionResult> {
   const parsed = sendBroadcastSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireStaffOrAdmin();
 
@@ -55,7 +56,7 @@ export async function sendBroadcast(buildingId: string, input: SendBroadcastInpu
       .eq('id', buildingId)
       .maybeSingle();
     if (!building?.staff_broadcast_enabled) {
-      return { ok: false, error: 'Staff broadcast permission is not enabled for this building.' };
+      return { ok: false, error: 'El permiso de aviso para el personal no está habilitado para este edificio.' };
     }
   }
 
@@ -81,7 +82,7 @@ export async function sendBroadcast(buildingId: string, input: SendBroadcastInpu
     })
     .select('id')
     .single();
-  if (error || !broadcast) return { ok: false, error: error?.message ?? 'Could not send broadcast' };
+  if (error || !broadcast) return { ok: false, error: toFriendlyMessage(error, 'No se pudo enviar el aviso.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -107,7 +108,7 @@ export async function deactivateBroadcast(broadcastId: string, buildingId: strin
       .eq('id', buildingId)
       .maybeSingle();
     if (!building?.staff_broadcast_enabled) {
-      return { ok: false, error: 'Staff broadcast permission is not enabled for this building.' };
+      return { ok: false, error: 'El permiso de aviso para el personal no está habilitado para este edificio.' };
     }
   }
 
@@ -118,8 +119,8 @@ export async function deactivateBroadcast(broadcastId: string, buildingId: strin
       { count: 'exact' },
     )
     .eq('id', broadcastId);
-  if (error) return { ok: false, error: error.message };
-  if (count === 0) return { ok: false, error: 'This broadcast is no longer active.' };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo desactivar el aviso.') };
+  if (count === 0) return { ok: false, error: 'Este aviso ya no está activo.' };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -136,7 +137,7 @@ export async function deactivateBroadcast(broadcastId: string, buildingId: strin
 /** FR-052: save a reusable predetermined message with an icon -- admin only. */
 export async function saveTemplate(buildingId: string, input: SaveTemplateInput): Promise<ActionResult> {
   const parsed = saveTemplateSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -150,7 +151,7 @@ export async function saveTemplate(buildingId: string, input: SaveTemplateInput)
     })
     .select('id')
     .single();
-  if (error || !template) return { ok: false, error: error?.message ?? 'Could not save template' };
+  if (error || !template) return { ok: false, error: toFriendlyMessage(error, 'No se pudo guardar la plantilla.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -166,7 +167,7 @@ export async function saveTemplate(buildingId: string, input: SaveTemplateInput)
 
 export async function updateTemplate(buildingId: string, input: UpdateTemplateInput): Promise<ActionResult> {
   const parsed = updateTemplateSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -175,7 +176,7 @@ export async function updateTemplate(buildingId: string, input: UpdateTemplateIn
     .update({ message: parsed.data.message, icon: parsed.data.icon ?? null })
     .eq('id', parsed.data.template_id)
     .eq('building_id', buildingId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar la plantilla.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -197,7 +198,7 @@ export async function deleteTemplate(templateId: string, buildingId: string): Pr
     .delete()
     .eq('id', templateId)
     .eq('building_id', buildingId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo eliminar la plantilla.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -217,7 +218,7 @@ export async function setStaffBroadcastPermission(
   input: SetStaffBroadcastPermissionInput,
 ): Promise<ActionResult> {
   const parsed = setStaffBroadcastPermissionSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -225,7 +226,7 @@ export async function setStaffBroadcastPermission(
     .from('buildings')
     .update({ staff_broadcast_enabled: parsed.data.enabled })
     .eq('id', buildingId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar el permiso.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getUserContext } from '@/lib/session';
 import { writeAuditLog } from '@/lib/audit';
 import { createPollSchema, type CreatePollInput } from '@/lib/validation/polls';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -13,7 +14,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -25,7 +26,7 @@ async function requireBuildingAdmin() {
  */
 export async function createPoll(buildingId: string, input: CreatePollInput): Promise<ActionResult> {
   const parsed = createPollSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -42,12 +43,12 @@ export async function createPoll(buildingId: string, input: CreatePollInput): Pr
     })
     .select('id')
     .single();
-  if (error || !poll) return { ok: false, error: error?.message ?? 'Could not create poll' };
+  if (error || !poll) return { ok: false, error: toFriendlyMessage(error, 'No se pudo crear la encuesta.') };
 
   const { error: optionsError } = await supabase.from('poll_options').insert(
     parsed.data.options.map((label, index) => ({ poll_id: poll.id, label, sort_order: index })),
   );
-  if (optionsError) return { ok: false, error: optionsError.message };
+  if (optionsError) return { ok: false, error: toFriendlyMessage(optionsError, 'No se pudieron guardar las opciones de la encuesta.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,

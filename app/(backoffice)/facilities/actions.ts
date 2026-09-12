@@ -7,6 +7,7 @@ import { writeAuditLog } from '@/lib/audit';
 import { facilitySchema, type FacilityInput } from '@/lib/validation/facilities';
 import { uploadBuildingFile, fileFromFormData, STORAGE_BUCKETS } from '@/lib/supabase/storage';
 import type { TablesUpdate } from '@/lib/supabase/database.types';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -14,7 +15,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -26,7 +27,7 @@ export async function createFacility(
 ): Promise<ActionResult> {
   const parsed = facilitySchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
   }
 
   const { supabase, ctx } = await requireBuildingAdmin();
@@ -43,7 +44,7 @@ export async function createFacility(
         kind: 'image',
       });
     } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : 'Image upload failed' };
+      return { ok: false, error: toFriendlyMessage(e, 'No se pudo subir la imagen.') };
     }
   }
 
@@ -53,7 +54,7 @@ export async function createFacility(
     .select('id')
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo crear la instalación.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -76,7 +77,7 @@ export async function updateFacility(
 ): Promise<ActionResult> {
   const parsed = facilitySchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
   }
 
   const { supabase, ctx } = await requireBuildingAdmin();
@@ -93,12 +94,12 @@ export async function updateFacility(
         kind: 'image',
       });
     } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : 'Image upload failed' };
+      return { ok: false, error: toFriendlyMessage(e, 'No se pudo subir la imagen.') };
     }
   }
 
   const { error } = await supabase.from('facilities').update(update).eq('id', facilityId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar la instalación.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -129,7 +130,7 @@ export async function deleteFacility(
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', facilityId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo eliminar la instalación.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,

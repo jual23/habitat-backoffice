@@ -14,6 +14,7 @@ import {
 } from '@/lib/supabase/storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/database.types';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type UrlResult = { ok: true; url: string } | { ok: false; error: string };
@@ -22,14 +23,14 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
 
 export async function createFolder(buildingId: string, input: FolderInput): Promise<ActionResult> {
   const parsed = folderSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -39,7 +40,7 @@ export async function createFolder(buildingId: string, input: FolderInput): Prom
     .select('id')
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo crear la carpeta.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -62,7 +63,7 @@ export async function renameFolder(
   const { supabase, ctx } = await requireBuildingAdmin();
 
   const { error } = await supabase.from('document_folders').update({ name }).eq('id', folderId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo renombrar la carpeta.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -107,7 +108,7 @@ export async function deleteFolder(folderId: string, buildingId: string): Promis
   }
 
   const { error } = await supabase.from('document_folders').delete().eq('id', folderId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo eliminar la carpeta.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -130,7 +131,7 @@ export async function uploadDocument(
   const { supabase, ctx } = await requireBuildingAdmin();
 
   const file = fileFromFormData(fileFormData);
-  if (!file) return { ok: false, error: 'No file selected' };
+  if (!file) return { ok: false, error: 'No se seleccionó ningún archivo.' };
 
   let file_path: string;
   try {
@@ -142,7 +143,7 @@ export async function uploadDocument(
       kind: 'document',
     });
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Upload failed' };
+    return { ok: false, error: toFriendlyMessage(e, 'No se pudo subir el archivo.') };
   }
 
   const { data, error } = await supabase
@@ -159,7 +160,7 @@ export async function uploadDocument(
     .select('id')
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo registrar el documento.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -183,7 +184,7 @@ export async function deleteDocument(documentId: string, buildingId: string): Pr
   }
 
   const { error } = await supabase.from('documents').delete().eq('id', documentId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo eliminar el documento.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -213,10 +214,10 @@ export async function getDocumentUrl(documentId: string): Promise<UrlResult> {
     .eq('id', documentId)
     .single();
 
-  if (error || !doc) return { ok: false, error: 'Document not found' };
+  if (error || !doc) return { ok: false, error: 'Documento no encontrado.' };
 
   const url = await trySignedUrlFor(supabase, STORAGE_BUCKETS.documents, doc.file_path);
-  if (!url) return { ok: false, error: 'Could not open this document' };
+  if (!url) return { ok: false, error: 'No se pudo abrir este documento.' };
 
   return { ok: true, url };
 }

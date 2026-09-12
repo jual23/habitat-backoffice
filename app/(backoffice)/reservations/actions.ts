@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { getUserContext } from '@/lib/session';
 import { writeAuditLog } from '@/lib/audit';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -11,7 +12,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -29,8 +30,8 @@ export async function approveReservation(
     .eq('id', reservationId)
     .eq('status', 'requested');
 
-  if (error) return { ok: false, error: error.message };
-  if (count === 0) return { ok: false, error: 'This reservation is no longer pending.' };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo aprobar la reserva.') };
+  if (count === 0) return { ok: false, error: 'Esta reserva ya no está pendiente.' };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -57,8 +58,8 @@ export async function declineReservation(
     .eq('id', reservationId)
     .eq('status', 'requested');
 
-  if (error) return { ok: false, error: error.message };
-  if (count === 0) return { ok: false, error: 'This reservation is no longer pending.' };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo rechazar la reserva.') };
+  if (count === 0) return { ok: false, error: 'Esta reserva ya no está pendiente.' };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { getUserContext } from '@/lib/session';
 import { writeAuditLog } from '@/lib/audit';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -11,7 +12,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -25,7 +26,7 @@ export async function toggleFavorite(
   const { supabase, ctx } = await requireBuildingAdmin();
 
   const { error } = await supabase.from('feedback').update({ starred }).eq('id', feedbackId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar el favorito.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -53,7 +54,7 @@ export async function discardEntry(feedbackId: string, buildingId: string): Prom
     .eq('id', feedbackId)
     .is('discarded_at', null);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo descartar la entrada.') };
   if (count === 0) return { ok: true }; // already discarded — no-op, not an error
 
   await writeAuditLog(supabase, {

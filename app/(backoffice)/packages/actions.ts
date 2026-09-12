@@ -6,6 +6,7 @@ import { getUserContext } from '@/lib/session';
 import { writeAuditLog } from '@/lib/audit';
 import { registerPackageSchema, type RegisterPackageInput } from '@/lib/validation/packages';
 import { uploadBuildingFile, fileFromFormData, STORAGE_BUCKETS } from '@/lib/supabase/storage';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -13,7 +14,7 @@ async function requireStaffOrAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'staff' && ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -29,7 +30,7 @@ export async function registerPackage(
 ): Promise<ActionResult> {
   const parsed = registerPackageSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
   }
 
   const { supabase, ctx } = await requireStaffOrAdmin();
@@ -46,7 +47,7 @@ export async function registerPackage(
         kind: 'image',
       });
     } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : 'Photo upload failed' };
+      return { ok: false, error: toFriendlyMessage(e, 'No se pudo subir la foto.') };
     }
   }
 
@@ -62,7 +63,7 @@ export async function registerPackage(
     .select('id')
     .single();
 
-  if (error || !pkg) return { ok: false, error: error?.message ?? 'Could not register package' };
+  if (error || !pkg) return { ok: false, error: toFriendlyMessage(error, 'No se pudo registrar el paquete.') };
 
   const { data: residents } = await supabase
     .from('profiles')
@@ -102,8 +103,8 @@ export async function markPickedUp(packageId: string, buildingId: string): Promi
     .eq('id', packageId)
     .eq('status', 'pending');
 
-  if (error) return { ok: false, error: error.message };
-  if (count === 0) return { ok: false, error: 'This package is no longer pending.' };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar el paquete.') };
+  if (count === 0) return { ok: false, error: 'Este paquete ya no está pendiente.' };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,

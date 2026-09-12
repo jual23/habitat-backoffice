@@ -8,6 +8,6 @@ import { z } from 'zod';
  */
 export const registerPackageSchema = z.object({
   apartment_id: z.string().uuid(),
-  description: z.string().trim().min(1, 'A description is required'),
+  description: z.string().trim().min(1, 'La descripción es obligatoria.'),
 });
 export type RegisterPackageInput = z.infer<typeof registerPackageSchema>;

@@ -13,6 +13,7 @@ import {
   updateBuildingSchema,
   createBuildingAdminAccountSchema,
 } from '@/lib/validation/buildings';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -26,7 +27,7 @@ async function requireAppAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || ctx.role !== 'app_admin') {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -58,12 +59,12 @@ async function assignAdministrator(
     const { error } = await supabase
       .from('user_roles')
       .insert({ user_id: administrator.userId, role: 'building_admin', building_id: buildingId });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo asignar el administrador.') };
     return { ok: true };
   }
 
   const parsed = createBuildingAdminAccountSchema.safeParse(administrator);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const result = await createBuildingUser({
     adminClient: getAdminClient(),
@@ -94,7 +95,7 @@ export async function createBuilding(
   administrator: AdministratorChoice,
 ): Promise<ActionResult> {
   const parsedName = createBuildingSchema.safeParse({ name });
-  if (!parsedName.success) return { ok: false, error: parsedName.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsedName.success) return { ok: false, error: parsedName.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireAppAdmin();
 
@@ -104,7 +105,7 @@ export async function createBuilding(
     .select('id')
     .single();
   if (insertError || !building) {
-    return { ok: false, error: insertError?.message ?? 'Could not create the building.' };
+    return { ok: false, error: toFriendlyMessage(insertError, 'No se pudo crear el edificio.') };
   }
 
   // Logo is optional (FR-005) and, unlike updateBuilding(), a problem with it
@@ -160,7 +161,7 @@ export async function updateBuilding(
   logoFormData: FormData | null,
 ): Promise<ActionResult> {
   const parsed = updateBuildingSchema.safeParse({ name });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireAppAdmin();
 
@@ -171,7 +172,7 @@ export async function updateBuilding(
     const bytes = new Uint8Array(await logoFile.arrayBuffer());
     const dims = getImageDimensions(bytes);
     if (dims && dims.width !== dims.height) {
-      return { ok: false, error: `Logo must be square (got ${dims.width}×${dims.height}).` };
+      return { ok: false, error: `El logo debe ser cuadrado (se recibió ${dims.width}×${dims.height}).` };
     }
     try {
       update.logo_url = await uploadBuildingFile(supabase, {
@@ -182,12 +183,12 @@ export async function updateBuilding(
         kind: 'image',
       });
     } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : 'Logo upload failed' };
+      return { ok: false, error: toFriendlyMessage(e, 'No se pudo subir el logo.') };
     }
   }
 
   const { error } = await supabase.from('buildings').update(update).eq('id', buildingId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar el edificio.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -234,7 +235,7 @@ export async function reassignBuildingAdministrator(
         'user_id',
         outgoing.map((o) => o.user_id),
       );
-    if (deleteError) return { ok: false, error: deleteError.message };
+    if (deleteError) return { ok: false, error: toFriendlyMessage(deleteError, 'No se pudo reasignar el administrador.') };
   }
 
   await writeAuditLog(supabase, {

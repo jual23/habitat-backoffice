@@ -6,7 +6,7 @@ export type TicketStatus = Enums<'ticket_status'>;
 /** FR-008: rejecting a ticket requires a reason. */
 export const rejectTicketSchema = z.object({
   ticket_id: z.string().uuid(),
-  rejection_reason: z.string().trim().min(1, 'A rejection reason is required'),
+  rejection_reason: z.string().trim().min(1, 'Se requiere un motivo de rechazo.'),
 });
 export type RejectTicketInput = z.infer<typeof rejectTicketSchema>;
 
@@ -23,7 +23,7 @@ export const markDuplicateSchema = z
     duplicate_of_ticket_id: z.string().uuid(),
   })
   .refine((v) => v.ticket_id !== v.duplicate_of_ticket_id, {
-    message: 'A ticket cannot be marked as a duplicate of itself',
+    message: 'Un ticket no puede marcarse como duplicado de sí mismo.',
     path: ['duplicate_of_ticket_id'],
   });
 export type MarkDuplicateInput = z.infer<typeof markDuplicateSchema>;
@@ -31,7 +31,7 @@ export type MarkDuplicateInput = z.infer<typeof markDuplicateSchema>;
 /** FR-007: a resident-visible comment left while a ticket is in_progress. */
 export const addCommentSchema = z.object({
   ticket_id: z.string().uuid(),
-  body: z.string().trim().min(1, 'Comment cannot be empty'),
+  body: z.string().trim().min(1, 'El comentario no puede estar vacío.'),
 });
 export type AddCommentInput = z.infer<typeof addCommentSchema>;
 

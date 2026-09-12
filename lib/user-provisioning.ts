@@ -56,7 +56,7 @@ export async function createBuildingUser(opts: {
 
   if (isApartmentScoped) {
     if (!apartmentId) {
-      return { error: 'An apartment must be selected for this account.' };
+      return { error: 'Debes seleccionar un apartamento para esta cuenta.' };
     }
     // Defense in depth (contracts/provisioning.md): the apartment must belong
     // to the same building the account is being scoped to. Checked BEFORE the
@@ -68,7 +68,7 @@ export async function createBuildingUser(opts: {
       .eq('building_id', buildingId)
       .maybeSingle();
     if (apartmentError) return { error: apartmentError.message };
-    if (!apartment) return { error: 'That apartment was not found in this building.' };
+    if (!apartment) return { error: 'No se encontró ese apartamento en este edificio.' };
   }
 
   const fullName = `${firstName} ${lastName}`.trim();
@@ -92,7 +92,7 @@ export async function createBuildingUser(opts: {
     // without leaking the rest of Supabase Auth's raw error shape.
     const message = createError?.message ?? 'Could not create the account.';
     if (/already.*registered|already.*exists/i.test(message)) {
-      return { error: 'An account with this email already exists.' };
+      return { error: 'Ya existe una cuenta con este correo electrónico.' };
     }
     return { error: message };
   }

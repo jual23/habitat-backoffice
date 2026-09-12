@@ -10,21 +10,21 @@ export type BroadcastIcon = z.infer<typeof broadcastIconSchema>;
 
 /** FR-051: send a custom or template-sourced broadcast. */
 export const sendBroadcastSchema = z.object({
-  message: z.string().trim().min(1, 'A message is required').max(2000),
+  message: z.string().trim().min(1, 'El mensaje es obligatorio.').max(2000),
   template_id: z.string().uuid().nullable().optional(),
 });
 export type SendBroadcastInput = z.infer<typeof sendBroadcastSchema>;
 
 /** FR-052: save a message as a reusable predetermined broadcast. */
 export const saveTemplateSchema = z.object({
-  message: z.string().trim().min(1, 'A message is required').max(2000),
+  message: z.string().trim().min(1, 'El mensaje es obligatorio.').max(2000),
   icon: broadcastIconSchema.nullable().optional(),
 });
 export type SaveTemplateInput = z.infer<typeof saveTemplateSchema>;
 
 export const updateTemplateSchema = z.object({
   template_id: z.string().uuid(),
-  message: z.string().trim().min(1, 'A message is required').max(2000),
+  message: z.string().trim().min(1, 'El mensaje es obligatorio.').max(2000),
   icon: broadcastIconSchema.nullable().optional(),
 });
 export type UpdateTemplateInput = z.infer<typeof updateTemplateSchema>;

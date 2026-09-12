@@ -11,6 +11,7 @@ import {
   type CreateResidentAccountInput,
 } from '@/lib/validation/users';
 import { updateResidentSchema, type UpdateResidentInput } from '@/lib/validation/apartments';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -18,7 +19,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -44,11 +45,11 @@ export async function createResident(
 ): Promise<ActionResult> {
   const parsed = createResidentAccountSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
   }
 
   const { supabase, ctx } = await requireBuildingAdmin();
-  if (!ctx.buildingId) return { ok: false, error: 'Not authorized' };
+  if (!ctx.buildingId) return { ok: false, error: 'No autorizado.' };
 
   const result = await createBuildingUser({
     adminClient: getAdminClient(),
@@ -103,7 +104,7 @@ export async function updateResident(
 ): Promise<ActionResult> {
   const parsed = updateResidentSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
   }
 
   const { supabase, ctx } = await requireBuildingAdmin();
@@ -111,7 +112,7 @@ export async function updateResident(
   const { error } = await supabase.from('profiles').update(parsed.data).eq('id', profileId);
 
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar el residente.') };
   }
 
   await writeAuditLog(supabase, {
@@ -137,7 +138,7 @@ export async function deleteResident(
   const { error } = await supabase.from('profiles').delete().eq('id', profileId);
 
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error: toFriendlyMessage(error, 'No se pudo eliminar el residente.') };
   }
 
   await writeAuditLog(supabase, {
@@ -162,7 +163,7 @@ export async function cancelResidentInvitation(
   const { error } = await supabase.from('invitations').delete().eq('id', invitationId);
 
   if (error) {
-    return { ok: false, error: error.message };
+    return { ok: false, error: toFriendlyMessage(error, 'No se pudo cancelar la invitación.') };
   }
 
   await writeAuditLog(supabase, {

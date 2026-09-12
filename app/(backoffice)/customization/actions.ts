@@ -8,6 +8,7 @@ import { customizationSchema, type CustomizationInput } from '@/lib/validation/c
 import { uploadBuildingFile, fileFromFormData, STORAGE_BUCKETS } from '@/lib/supabase/storage';
 import { getImageDimensions } from '@/lib/image-dimensions';
 import type { TablesUpdate } from '@/lib/supabase/database.types';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -22,12 +23,12 @@ export async function updateCustomization(
   logoFormData?: FormData | null,
 ): Promise<ActionResult> {
   const parsed = customizationSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
 
   const update: TablesUpdate<'buildings'> = { accent_color: parsed.data.accent_color };
@@ -37,7 +38,7 @@ export async function updateCustomization(
     const bytes = new Uint8Array(await logoFile.arrayBuffer());
     const dims = getImageDimensions(bytes);
     if (dims && dims.width !== dims.height) {
-      return { ok: false, error: `Logo must be square (got ${dims.width}×${dims.height}).` };
+      return { ok: false, error: `El logo debe ser cuadrado (se recibió ${dims.width}×${dims.height}).` };
     }
 
     try {
@@ -49,12 +50,12 @@ export async function updateCustomization(
         kind: 'image',
       });
     } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : 'Logo upload failed' };
+      return { ok: false, error: toFriendlyMessage(e, 'No se pudo subir el logo.') };
     }
   }
 
   const { error } = await supabase.from('buildings').update(update).eq('id', buildingId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar la personalización.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user.id,

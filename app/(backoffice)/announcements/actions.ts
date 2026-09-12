@@ -12,6 +12,7 @@ import {
   STORAGE_BUCKETS,
 } from '@/lib/supabase/storage';
 import type { TablesUpdate } from '@/lib/supabase/database.types';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type UrlResult = { ok: true; url: string } | { ok: false; error: string };
@@ -20,7 +21,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -31,7 +32,7 @@ export async function createAnnouncement(
   bannerFormData?: FormData | null,
 ): Promise<ActionResult> {
   const parsed = announcementSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -47,7 +48,7 @@ export async function createAnnouncement(
         kind: 'image',
       });
     } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : 'Banner upload failed' };
+      return { ok: false, error: toFriendlyMessage(e, 'No se pudo subir la imagen.') };
     }
   }
 
@@ -57,7 +58,7 @@ export async function createAnnouncement(
     .select('id')
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo crear el anuncio.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -79,7 +80,7 @@ export async function updateAnnouncement(
   bannerFormData?: FormData | null,
 ): Promise<ActionResult> {
   const parsed = announcementSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
 
   const { supabase, ctx } = await requireBuildingAdmin();
 
@@ -95,12 +96,12 @@ export async function updateAnnouncement(
         kind: 'image',
       });
     } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : 'Banner upload failed' };
+      return { ok: false, error: toFriendlyMessage(e, 'No se pudo subir la imagen.') };
     }
   }
 
   const { error } = await supabase.from('announcements').update(update).eq('id', announcementId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar el anuncio.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -122,7 +123,7 @@ export async function deleteAnnouncement(
   const { supabase, ctx } = await requireBuildingAdmin();
 
   const { error } = await supabase.from('announcements').delete().eq('id', announcementId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo eliminar el anuncio.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -145,7 +146,7 @@ export async function togglePin(
   const { supabase, ctx } = await requireBuildingAdmin();
 
   const { error } = await supabase.from('announcements').update({ pinned }).eq('id', announcementId);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar el anuncio.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -168,7 +169,7 @@ export async function addAttachment(
   const { supabase, ctx } = await requireBuildingAdmin();
 
   const file = fileFromFormData(fileFormData);
-  if (!file) return { ok: false, error: 'No file selected' };
+  if (!file) return { ok: false, error: 'No se seleccionó ningún archivo.' };
 
   let file_path: string;
   try {
@@ -180,7 +181,7 @@ export async function addAttachment(
       kind: 'document',
     });
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Attachment upload failed' };
+    return { ok: false, error: toFriendlyMessage(e, 'No se pudo subir el archivo adjunto.') };
   }
 
   const { data, error } = await supabase
@@ -195,7 +196,7 @@ export async function addAttachment(
     .select('id')
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo adjuntar el archivo.') };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user!.id,
@@ -221,7 +222,7 @@ export async function addAttachment(
 export async function getAttachmentUrl(attachmentId: string): Promise<UrlResult> {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
-  if (!ctx.user) return { ok: false, error: 'Not authorized' };
+  if (!ctx.user) return { ok: false, error: 'No autorizado.' };
 
   const { data: attachment, error } = await supabase
     .from('announcement_attachments')
@@ -229,10 +230,10 @@ export async function getAttachmentUrl(attachmentId: string): Promise<UrlResult>
     .eq('id', attachmentId)
     .single();
 
-  if (error || !attachment) return { ok: false, error: 'Attachment not found' };
+  if (error || !attachment) return { ok: false, error: 'Archivo adjunto no encontrado.' };
 
   const url = await trySignedUrlFor(supabase, STORAGE_BUCKETS.documents, attachment.file_path);
-  if (!url) return { ok: false, error: 'Could not open this attachment' };
+  if (!url) return { ok: false, error: 'No se pudo abrir este archivo adjunto.' };
 
   return { ok: true, url };
 }

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getUserContext } from '@/lib/session';
 import { writeAuditLog } from '@/lib/audit';
 import { apartmentSchema, type ApartmentInput } from '@/lib/validation/apartments';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -12,7 +13,7 @@ async function requireBuildingAdmin() {
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
   return { supabase, ctx };
 }
@@ -23,7 +24,7 @@ export async function createApartment(
 ): Promise<ActionResult> {
   const parsed = apartmentSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
   }
 
   const { supabase, ctx } = await requireBuildingAdmin();
@@ -36,9 +37,9 @@ export async function createApartment(
 
   if (error) {
     if (error.code === '23505') {
-      return { ok: false, error: 'This unit already exists in this building.' };
+      return { ok: false, error: 'Esta unidad ya existe en este edificio.' };
     }
-    return { ok: false, error: error.message };
+    return { ok: false, error: toFriendlyMessage(error, 'No se pudo crear el apartamento.') };
   }
 
   await writeAuditLog(supabase, {
@@ -61,7 +62,7 @@ export async function updateApartment(
 ): Promise<ActionResult> {
   const parsed = apartmentSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos. Revisa el formulario.' };
   }
 
   const { supabase, ctx } = await requireBuildingAdmin();
@@ -73,9 +74,9 @@ export async function updateApartment(
 
   if (error) {
     if (error.code === '23505') {
-      return { ok: false, error: 'This unit already exists in this building.' };
+      return { ok: false, error: 'Esta unidad ya existe en este edificio.' };
     }
-    return { ok: false, error: error.message };
+    return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar el apartamento.') };
   }
 
   await writeAuditLog(supabase, {
@@ -109,10 +110,10 @@ export async function deleteApartment(
     if (error.code === '23503') {
       return {
         ok: false,
-        error: 'Cannot delete an apartment that still has residents assigned to it.',
+        error: 'No se puede eliminar un apartamento que todavía tiene residentes asignados.',
       };
     }
-    return { ok: false, error: error.message };
+    return { ok: false, error: toFriendlyMessage(error, 'No se pudo eliminar el apartamento.') };
   }
 
   await writeAuditLog(supabase, {

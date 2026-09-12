@@ -13,7 +13,7 @@ export async function GET() {
   const ctx = await getUserContext(supabase);
 
   if (!ctx.user || (ctx.role !== 'building_admin' && ctx.role !== 'app_admin') || !ctx.buildingId) {
-    return new Response('Not authorized', { status: 403 });
+    return new Response('No autorizado.', { status: 403 });
   }
 
   const { data: apartments } = await supabase

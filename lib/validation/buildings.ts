@@ -7,12 +7,12 @@ import { z } from 'zod';
  * app/(backoffice)/customization/actions.ts).
  */
 export const createBuildingSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required').max(200),
+  name: z.string().trim().min(1, 'El nombre es obligatorio.').max(200),
 });
 export type CreateBuildingInput = z.infer<typeof createBuildingSchema>;
 
 export const updateBuildingSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required').max(200),
+  name: z.string().trim().min(1, 'El nombre es obligatorio.').max(200),
 });
 export type UpdateBuildingInput = z.infer<typeof updateBuildingSchema>;
 
@@ -28,10 +28,10 @@ export type UpdateBuildingInput = z.infer<typeof updateBuildingSchema>;
  * (research.md §9).
  */
 export const createBuildingAdminAccountSchema = z.object({
-  email: z.string().trim().email('A valid email is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  first_name: z.string().trim().min(1, 'First name is required').max(200),
-  last_name: z.string().trim().min(1, 'Last name is required').max(200),
-  document_id: z.string().trim().min(1, 'Document ID is required').max(100),
+  email: z.string().trim().email('Se requiere un correo electrónico válido.'),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
+  first_name: z.string().trim().min(1, 'El nombre es obligatorio.').max(200),
+  last_name: z.string().trim().min(1, 'El apellido es obligatorio.').max(200),
+  document_id: z.string().trim().min(1, 'El documento de identidad es obligatorio.').max(100),
 });
 export type CreateBuildingAdminAccountInput = z.infer<typeof createBuildingAdminAccountSchema>;

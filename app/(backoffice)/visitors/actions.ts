@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { getUserContext } from '@/lib/session';
 import { writeAuditLog } from '@/lib/audit';
+import { toFriendlyMessage } from '@/lib/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -15,7 +16,7 @@ export async function markVisitorArrived(
   const supabase = await createClient();
   const ctx = await getUserContext(supabase);
   if (!ctx.user || (ctx.role !== 'staff' && ctx.role !== 'building_admin')) {
-    throw new Error('Not authorized');
+    throw new Error('No autorizado.');
   }
 
   const { error, count } = await supabase
@@ -24,8 +25,8 @@ export async function markVisitorArrived(
     .eq('id', visitorId)
     .eq('status', 'pending');
 
-  if (error) return { ok: false, error: error.message };
-  if (count === 0) return { ok: false, error: 'This visitor is no longer pending.' };
+  if (error) return { ok: false, error: toFriendlyMessage(error, 'No se pudo actualizar el visitante.') };
+  if (count === 0) return { ok: false, error: 'Este visitante ya no está pendiente.' };
 
   await writeAuditLog(supabase, {
     actorId: ctx.user.id,
