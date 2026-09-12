@@ -52,24 +52,34 @@ const NAV_ITEMS = [
 
 export function SidebarNav({
   staffOnly,
+  isAppAdmin = false,
   hasUnhandledEmergency = false,
 }: {
   staffOnly: boolean;
+  /**
+   * 012-app-admin-building-management (research.md §2): App Administrator
+   * keeps only the Users link — every building-operational module is hidden,
+   * since none of them apply without a specific building selected (App
+   * Administrator's own `ctx.buildingId` is always null).
+   */
+  isAppAdmin?: boolean;
   /** 007-finance-ops-expansion (T062, FR-060): blinks the Emergency link. */
   hasUnhandledEmergency?: boolean;
 }) {
   const pathname = usePathname();
-  const items = staffOnly
-    ? NAV_ITEMS.filter(
-        (item) =>
-          item.href === '/visitors' ||
-          item.href === '/incidencias' ||
-          item.href === '/packages' ||
-          item.href === '/maintenance' ||
-          item.href === '/emergency' ||
-          item.href === '/broadcast',
-      )
-    : NAV_ITEMS;
+  const items = isAppAdmin
+    ? NAV_ITEMS.filter((item) => item.href === '/users')
+    : staffOnly
+      ? NAV_ITEMS.filter(
+          (item) =>
+            item.href === '/visitors' ||
+            item.href === '/incidencias' ||
+            item.href === '/packages' ||
+            item.href === '/maintenance' ||
+            item.href === '/emergency' ||
+            item.href === '/broadcast',
+        )
+      : NAV_ITEMS;
 
   return (
     <nav className="nav">

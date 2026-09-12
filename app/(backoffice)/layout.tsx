@@ -32,6 +32,9 @@ export default async function BackofficeLayout({ children }: { children: ReactNo
   }
 
   const isStaffOnly = ctx.role === 'staff';
+  // 012-app-admin-building-management (research.md §2): App Administrator
+  // sees only the Users module — see SidebarNav.
+  const isAppAdmin = ctx.role === 'app_admin';
 
   let buildingName = 'Habitat';
   let logoSignedUrl: string | null = null;
@@ -74,7 +77,7 @@ export default async function BackofficeLayout({ children }: { children: ReactNo
           </div>
         </div>
 
-        <SidebarNav staffOnly={isStaffOnly} hasUnhandledEmergency={hasUnhandledEmergency} />
+        <SidebarNav staffOnly={isStaffOnly} isAppAdmin={isAppAdmin} hasUnhandledEmergency={hasUnhandledEmergency} />
 
         <div className="sidebar-footer">
           <div className="sidebar-user">

@@ -21,16 +21,25 @@ export type CreateBuildingUserResult = { userId: string } | { error: string };
  * running app; tests/fixtures.ts's getServiceClient() in tests) — it's the
  * only way to create an auth.users row with an admin-chosen password.
  * `requestClient` MUST be the acting admin's own RLS-enforced, request-scoped
- * client — used only for the Staff `user_roles` insert, which stays subject
- * to the existing "staff role insert by building admins" policy regardless of
- * what `buildingId` this function was called with (defense in depth).
+ * client — used only for the Staff/Building Administrator `user_roles`
+ * insert, which stays subject to the existing (Staff) or newly-added
+ * (Building Administrator, 012-app-admin-building-management migration 0048)
+ * RLS policy regardless of what `buildingId` this function was called with
+ * (defense in depth).
+ *
+ * 012-app-admin-building-management (research.md §4): `role` additionally
+ * accepts `'building_admin'`, provisioned identically to `'staff'` — no
+ * `apartmentId`, a plain `user_roles` insert, just a different `role` value.
+ * Called only from an App Administrator's own actions (`buildings-actions.ts`);
+ * this function itself does not re-verify the caller's role (research.md §7's
+ * existing pattern — the caller is responsible for that).
  */
 export async function createBuildingUser(opts: {
   adminClient: SupabaseClient<Database>;
   requestClient: SupabaseClient<Database>;
   actorId: string;
   buildingId: string;
-  role: 'resident' | 'renter' | 'staff';
+  role: 'resident' | 'renter' | 'staff' | 'building_admin';
   email: string;
   password: string;
   firstName: string;
@@ -90,10 +99,10 @@ export async function createBuildingUser(opts: {
 
   const userId = created.user.id;
 
-  if (role === 'staff') {
+  if (role === 'staff' || role === 'building_admin') {
     const { error: roleError } = await requestClient
       .from('user_roles')
-      .insert({ user_id: userId, role: 'staff', building_id: buildingId });
+      .insert({ user_id: userId, role, building_id: buildingId });
     if (roleError) {
       // Roll back the just-created auth account so a partial failure never
       // leaves an orphaned, role-less account behind (FR-007/FR-008's "no

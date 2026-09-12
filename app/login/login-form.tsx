@@ -1,11 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +27,15 @@ export function LoginForm() {
       return;
     }
 
-    router.refresh();
-    router.push('/');
+    // Hard navigation instead of router.refresh()+router.push('/'): right after
+    // a fresh sign-in, refresh() re-renders /login itself while push() races it
+    // to navigate away, which can leave the page looking like it "just
+    // refreshed" with no visible error. A full navigation guarantees the next
+    // request carries the new session cookie and lands on the real landing
+    // route computed by app/page.tsx. This is the auth entry transition, not
+    // navigation between backoffice pages, so it doesn't conflict with the
+    // constitution's no-full-reload rule for those.
+    window.location.href = '/';
   }
 
   return (
