@@ -16,12 +16,16 @@ export default async function MaintenancePage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>Los Administradores de la app gestionan esto por edificio en otro lugar.</p>;
 
+  // 011-module-navigation-performance (FR-008, research.md §9): tasks capped
+  // to an initial ~25-record batch; completions already had its own
+  // deliberate `.limit(50)` from an earlier feature, left as-is.
   const [{ data: tasks }, { data: completions }] = await Promise.all([
     supabase
       .from('maintenance_tasks')
       .select('id, name, frequency, interval_months, next_due_date')
       .eq('building_id', buildingId)
-      .order('next_due_date', { ascending: true, nullsFirst: false }),
+      .order('next_due_date', { ascending: true, nullsFirst: false })
+      .range(0, 24),
     supabase
       .from('maintenance_completions')
       .select('id, task_id, completed_by, completed_at, photo_url')

@@ -674,3 +674,85 @@ tbody tr:last-child td {
   gap: 8px;
   margin-top: 4px;
 }
+
+/* ---------- Skeleton loading state (011-module-navigation-performance) ---------- */
+/*
+ * Shared by every app/(backoffice)/<module>/loading.tsx — a static,
+ * data-free Suspense fallback (contracts/module-page-pattern.md). Composed
+ * via components/skeleton.tsx rather than duplicated per module.
+ */
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.skeleton-block {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+.skeleton-header {
+  height: 28px;
+  width: 220px;
+  margin-bottom: 24px;
+}
+
+.skeleton-row {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.skeleton-row .skeleton-block:first-child {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.skeleton-row-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-row-lines .skeleton-block:first-child {
+  height: 14px;
+  width: 45%;
+}
+
+.skeleton-row-lines .skeleton-block:last-child {
+  height: 12px;
+  width: 25%;
+}
+
+.skeleton-tile {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-tile .skeleton-block:first-child {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+}

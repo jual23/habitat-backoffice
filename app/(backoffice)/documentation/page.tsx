@@ -15,13 +15,17 @@ export default async function DocumentationPage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>App Administrators manage documentation per-building elsewhere.</p>;
 
+  // 011-module-navigation-performance (FR-008, research.md §9): documents
+  // capped to an initial ~25-record batch; the folder tree is typically
+  // small and left uncapped.
   const [{ data: folders }, { data: documents }] = await Promise.all([
     supabase.from('document_folders').select('id, name, parent_id').eq('building_id', buildingId).order('name'),
     supabase
       .from('documents')
       .select('id, name, folder_id, size_bytes, created_at')
       .eq('building_id', buildingId)
-      .order('name'),
+      .order('name')
+      .range(0, 24),
   ]);
 
   return (

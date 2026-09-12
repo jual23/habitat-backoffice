@@ -15,11 +15,14 @@ export default async function ReservationsPage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>App Administrators manage reservations per-building elsewhere.</p>;
 
+  // 011-module-navigation-performance (FR-008, research.md §9): capped to an
+  // initial ~25-record batch rather than the full reservations history.
   const { data: reservations } = await supabase
     .from('reservations')
     .select('id, facility_id, reserved_date, start_time, end_time, guests, status, facilities(name)')
     .eq('building_id', buildingId)
-    .order('reserved_date', { ascending: false });
+    .order('reserved_date', { ascending: false })
+    .range(0, 24);
 
   return (
     <ReservationsClient

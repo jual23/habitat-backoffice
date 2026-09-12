@@ -19,13 +19,29 @@ export default async function IncidenciasPage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>Los Administradores de la app gestionan esto por edificio en otro lugar.</p>;
 
-  const { data: tickets } = await supabase
-    .from('tickets')
-    .select(
-      'id, title, description, status, rejection_reason, duplicate_of_ticket_id, apartment_id, reported_by, created_at',
-    )
-    .eq('building_id', buildingId)
-    .order('created_at', { ascending: false });
+  // 011-module-navigation-performance (research.md §4, §9): tickets,
+  // apartments, and the duplicate-candidates list are independent of each
+  // other (only comments depends on which tickets come back) — run them
+  // concurrently. The main tickets list is capped to an initial ~25-record
+  // batch (FR-008); duplicateCandidates is a small reference list (only
+  // pending/in_progress tickets, used for a picker) and is left uncapped.
+  const [{ data: tickets }, { data: apartments }, { data: duplicateCandidates }] = await Promise.all([
+    supabase
+      .from('tickets')
+      .select(
+        'id, title, description, status, rejection_reason, duplicate_of_ticket_id, apartment_id, reported_by, created_at',
+      )
+      .eq('building_id', buildingId)
+      .order('created_at', { ascending: false })
+      .range(0, 24),
+    supabase.from('apartments').select('id, unit_number, tower').eq('building_id', buildingId),
+    // FR-009: only Pending/In-Progress tickets are valid duplicate-link targets.
+    supabase
+      .from('tickets')
+      .select('id, title')
+      .eq('building_id', buildingId)
+      .in('status', ['pending', 'in_progress']),
+  ]);
 
   const ticketIds = (tickets ?? []).map((t) => t.id);
 
@@ -37,18 +53,6 @@ export default async function IncidenciasPage() {
           .in('ticket_id', ticketIds)
           .order('created_at', { ascending: true })
       : { data: [] };
-
-  const { data: apartments } = await supabase
-    .from('apartments')
-    .select('id, unit_number, tower')
-    .eq('building_id', buildingId);
-
-  // FR-009: only Pending/In-Progress tickets are valid duplicate-link targets.
-  const { data: duplicateCandidates } = await supabase
-    .from('tickets')
-    .select('id, title')
-    .eq('building_id', buildingId)
-    .in('status', ['pending', 'in_progress']);
 
   return (
     <IncidenciasClient

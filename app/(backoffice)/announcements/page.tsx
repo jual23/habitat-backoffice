@@ -16,6 +16,8 @@ export default async function AnnouncementsPage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>App Administrators manage announcements per-building elsewhere.</p>;
 
+  // 011-module-navigation-performance (FR-008, research.md §9): capped to an
+  // initial ~25-record batch rather than the full announcements table.
   const { data: announcements } = await supabase
     .from('announcements')
     .select(
@@ -23,7 +25,8 @@ export default async function AnnouncementsPage() {
     )
     .eq('building_id', buildingId)
     .order('pinned', { ascending: false })
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 24);
 
   // 003-upload-display-fix (T007): banner_url is a private Storage path.
   const withSignedUrls = await Promise.all(

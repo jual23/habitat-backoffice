@@ -16,12 +16,25 @@ export default async function FacilitiesPage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>App Administrators manage facilities per-building elsewhere.</p>;
 
-  const { data: facilities } = await supabase
-    .from('facilities')
-    .select('id, name, description, image_url, opens_at, closes_at, open_days, reservable, deleted_at')
-    .eq('building_id', buildingId)
-    .is('deleted_at', null)
-    .order('name');
+  // 011-module-navigation-performance (research.md §1.3, §4, §9): the
+  // facilities query and the building-timezone query are independent —
+  // run them concurrently instead of sequentially. Facilities is also
+  // capped to an initial ~25-record batch (FR-008) rather than the full
+  // table (contracts/module-page-pattern.md rule 5 — this is the contract's
+  // reference implementation).
+  const [{ data: facilities }, { data: building }] = await Promise.all([
+    supabase
+      .from('facilities')
+      .select('id, name, description, image_url, opens_at, closes_at, open_days, reservable, deleted_at')
+      .eq('building_id', buildingId)
+      .is('deleted_at', null)
+      .order('name')
+      .range(0, 24),
+    // 004-facilities-incidencias-packages (T033): the open/closed bubble needs
+    // the building's own timezone, not the viewer's browser timezone
+    // (research.md item 3).
+    supabase.from('buildings').select('timezone').eq('id', buildingId).single(),
+  ]);
 
   // 003-upload-display-fix (T003): image_url is a private Storage path, not a
   // usable URL — resolve it to a 24h signed URL here, server-side, before
@@ -32,11 +45,6 @@ export default async function FacilitiesPage() {
       image_signed_url: await trySignedUrlFor(supabase, STORAGE_BUCKETS.media, f.image_url, 86400),
     })),
   );
-
-  // 004-facilities-incidencias-packages (T033): the open/closed bubble needs
-  // the building's own timezone, not the viewer's browser timezone
-  // (research.md item 3).
-  const { data: building } = await supabase.from('buildings').select('timezone').eq('id', buildingId).single();
 
   return (
     <FacilitiesClient

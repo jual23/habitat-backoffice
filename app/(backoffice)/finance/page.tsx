@@ -31,13 +31,16 @@ export default async function FinancePage() {
       .select('payment_available_day, payment_due_day, late_fee_type, late_fee_amount')
       .eq('id', buildingId)
       .maybeSingle(),
+    // 011-module-navigation-performance (FR-008, research.md §9): capped to
+    // an initial ~25-record batch rather than the full payments history.
     supabase
       .from('payments')
       .select(
         'id, apartment_id, amount, late_fee_amount, status, available_date, due_date, reviewed_at, apartments(tower, unit_number)',
       )
       .eq('building_id', buildingId)
-      .order('due_date', { ascending: false }),
+      .order('due_date', { ascending: false })
+      .range(0, 24),
   ]);
 
   return (

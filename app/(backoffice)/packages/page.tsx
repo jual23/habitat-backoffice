@@ -19,17 +19,18 @@ export default async function PackagesPage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>Los Administradores de la app gestionan esto por edificio en otro lugar.</p>;
 
-  const { data: apartments } = await supabase
-    .from('apartments')
-    .select('id, unit_number, tower')
-    .eq('building_id', buildingId)
-    .order('unit_number');
-
-  const { data: packages } = await supabase
-    .from('packages')
-    .select('id, apartment_id, description, photo_url, status, created_at, picked_up_at')
-    .eq('building_id', buildingId)
-    .order('created_at', { ascending: false });
+  // 011-module-navigation-performance (research.md §4, §9): apartments and
+  // packages are independent — run them concurrently. Packages capped to an
+  // initial ~25-record batch (FR-008).
+  const [{ data: apartments }, { data: packages }] = await Promise.all([
+    supabase.from('apartments').select('id, unit_number, tower').eq('building_id', buildingId).order('unit_number'),
+    supabase
+      .from('packages')
+      .select('id, apartment_id, description, photo_url, status, created_at, picked_up_at')
+      .eq('building_id', buildingId)
+      .order('created_at', { ascending: false })
+      .range(0, 24),
+  ]);
 
   // 003-upload-display-fix pattern: photo_url is a private Storage path, not a
   // usable URL — resolve it to a signed URL server-side.

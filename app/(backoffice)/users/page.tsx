@@ -21,14 +21,24 @@ export default async function UsersPage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>Los Administradores de la app gestionan esto por edificio en otro lugar.</p>;
 
+  // 011-module-navigation-performance (FR-008, research.md §9): apartments
+  // and residents are the two lists here that scale with building size —
+  // both capped to an initial ~25-record batch; invites/roles are typically
+  // small (pending invites, a handful of admins/staff) and left uncapped.
   const [{ data: apartments }, { data: residents }, { data: residentInvites }, { data: roles }, { data: staffInvites }] =
     await Promise.all([
-      supabase.from('apartments').select('id, tower, unit_number').eq('building_id', buildingId).order('unit_number'),
+      supabase
+        .from('apartments')
+        .select('id, tower, unit_number')
+        .eq('building_id', buildingId)
+        .order('unit_number')
+        .range(0, 24),
       supabase
         .from('profiles')
         .select('id, full_name, first_name, last_name, document_id, email, apartment_id, tenant_type')
         .eq('building_id', buildingId)
-        .not('apartment_id', 'is', null),
+        .not('apartment_id', 'is', null)
+        .range(0, 24),
       supabase
         .from('invitations')
         .select('id, email, full_name, apartment_id, expires_at')

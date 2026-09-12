@@ -17,18 +17,22 @@ export default async function ApartmentsPage() {
     return <p>App Administrators manage apartments per-building elsewhere.</p>;
   }
 
+  // 011-module-navigation-performance (FR-008, research.md §9): both lists
+  // scale with building size — capped to an initial ~25-record batch each.
   const [{ data: apartments }, { data: residents }] = await Promise.all([
     supabase
       .from('apartments')
       .select('id, tower, unit_number, floor, created_at')
       .eq('building_id', buildingId)
       .order('tower')
-      .order('unit_number'),
+      .order('unit_number')
+      .range(0, 24),
     supabase
       .from('profiles')
       .select('id, full_name, email, apartment_id')
       .eq('building_id', buildingId)
-      .not('apartment_id', 'is', null),
+      .not('apartment_id', 'is', null)
+      .range(0, 24),
   ]);
 
   return (

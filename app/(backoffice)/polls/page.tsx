@@ -20,11 +20,14 @@ export default async function PollsPage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>Los Administradores de la app gestionan esto por edificio en otro lugar.</p>;
 
+  // 011-module-navigation-performance (FR-008, research.md §9): capped to an
+  // initial ~25-record batch rather than the full polls history.
   const { data: polls } = await supabase
     .from('polls')
     .select('id, title, description, allow_multiple, anonymous, closes_at')
     .eq('building_id', buildingId)
-    .order('closes_at', { ascending: false });
+    .order('closes_at', { ascending: false })
+    .range(0, 24);
 
   const pollsWithData = await Promise.all(
     (polls ?? []).map(async (poll) => {

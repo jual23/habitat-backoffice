@@ -15,12 +15,15 @@ export default async function BroadcastPage() {
   const buildingId = ctx.buildingId;
   if (!buildingId) return <p>Los Administradores de la app gestionan esto por edificio en otro lugar.</p>;
 
+  // 011-module-navigation-performance (FR-008, research.md §9): broadcasts
+  // capped to an initial ~25-record batch; templates/settings are small.
   const [{ data: broadcasts }, { data: templates }, { data: building }] = await Promise.all([
     supabase
       .from('broadcasts')
       .select('id, message, icon, template_id, status, sent_by, deactivated_at, created_at')
       .eq('building_id', buildingId)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .range(0, 24),
     supabase
       .from('broadcast_templates')
       .select('id, message, icon, created_at')

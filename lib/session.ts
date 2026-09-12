@@ -1,4 +1,5 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
+import { requestCache } from './request-cache';
 import type { Database, Enums } from './supabase/database.types';
 
 export type AdminRole = Exclude<Enums<'app_role'>, 'resident'>;
@@ -20,8 +21,24 @@ export type UserContext =
  * `user_roles` row and a `profiles.apartment_id` is treated as a resident or renter
  * per that column; this app's backoffice does not serve either, but
  * `app/(backoffice)/layout.tsx` still needs to recognize (and reject) both cases.
+ *
+ * 011-module-navigation-performance (research.md §2): wrapped in
+ * `requestCache()` (lib/request-cache.ts — React's `cache()` where
+ * available, a plain passthrough otherwise) so it's computed once per
+ * request instead of once per caller — `app/(backoffice)/layout.tsx` and
+ * whichever module's `page.tsx` is rendering both call this, and previously
+ * each paid the full `auth.getUser()` + `user_roles` (+ `profiles`)
+ * round-trip cost independently. This still takes `supabase` as a parameter
+ * (rather than resolving it internally via `createClient()`) for two
+ * reasons: (1) it keeps this function directly unit/integration-testable
+ * with a plain client outside a Next.js request context, the same way
+ * `createBuildingUser()` (lib/user-provisioning.ts) is; (2) `createClient()`
+ * (lib/supabase/server.ts) is itself now also wrapped in `requestCache()`,
+ * so every real caller within one request already receives the *same*
+ * client instance — which is what makes `cache()`'s argument-identity
+ * memoization actually hit here.
  */
-export async function getUserContext(
+export const getUserContext = requestCache(async function getUserContext(
   supabase: SupabaseClient<Database>,
 ): Promise<UserContext> {
   const {
@@ -69,4 +86,4 @@ export async function getUserContext(
   }
 
   return { user, role: null, buildingId: null };
-}
+});

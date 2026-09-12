@@ -22,13 +22,16 @@ export default async function VisitorsPage() {
   // 007-finance-ops-expansion (US3, FR-030): show which apartment registered
   // each visitor — visitors.apartment_id already existed (feature 001), it was
   // simply not yet selected/joined here.
+  // 011-module-navigation-performance (FR-008, research.md §9): capped to an
+  // initial ~25-record batch rather than the full visitors history.
   const { data: visitors } = await supabase
     .from('visitors')
     .select(
       'id, full_name, document_id, vehicle_plate, status, expires_at, arrived_at, apartment_id, apartments(tower, unit_number)',
     )
     .eq('building_id', buildingId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 24);
 
   return <VisitorsClient buildingId={buildingId} visitors={visitors ?? []} />;
 }
