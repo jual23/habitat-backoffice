@@ -134,7 +134,7 @@ export function MaintenanceClient({
               <input type="date" value={form.next_due_date} onChange={(e) => setForm({ ...form, next_due_date: e.target.value })} />
             </div>
             <div className="field" style={{ alignSelf: 'flex-end' }}>
-              <button className="btn" onClick={create} disabled={isPending || !form.name || !form.next_due_date}>
+              <button className="btn btn-inline" onClick={create} disabled={isPending || !form.name || !form.next_due_date}>
                 Crear
               </button>
             </div>

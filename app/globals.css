@@ -14,6 +14,10 @@
   --radius: 10px;
   --radius-sm: 6px;
   --shadow-card: 0 1px 2px rgba(20, 20, 15, 0.06), 0 1px 1px rgba(20, 20, 15, 0.04);
+  /* 014-button-input-alignment: shared target height for a button placed
+     beside an input/select (see .btn-inline below) — matches .field input's
+     current rendered height without changing the field itself. */
+  --control-height: 40px;
 }
 
 * {
@@ -224,6 +228,17 @@ h1 {
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 014-button-input-alignment: for a .btn placed beside an input/select in the
+   same row (see contracts/btn-inline-contract.md — apply only there, never as
+   a blanket rule) — matches the field's height instead of .btn's own shorter
+   default, caps the width instead of letting it stretch to fill its flex
+   column, and centers the label now that its width isn't purely content-driven. */
+.btn-inline {
+  height: var(--control-height);
+  max-width: 150px;
+  justify-content: center;
 }
 
 .btn-secondary {

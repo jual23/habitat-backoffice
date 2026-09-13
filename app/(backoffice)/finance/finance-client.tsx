@@ -186,7 +186,7 @@ export function FinanceClient({
             <input type="number" min="0" step="0.01" value={feeAmount} onChange={(e) => setFeeAmount(e.target.value)} />
           </div>
           <div className="field" style={{ alignSelf: 'flex-end' }}>
-            <button className="btn" onClick={saveFee} disabled={isPending || !feeApartmentId || !feeAmount}>
+            <button className="btn btn-inline" onClick={saveFee} disabled={isPending || !feeApartmentId || !feeAmount}>
               Guardar
             </button>
           </div>
