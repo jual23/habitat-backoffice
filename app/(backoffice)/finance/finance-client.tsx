@@ -4,7 +4,12 @@ import { useMemo, useState, useTransition } from 'react';
 import { setApartmentFee, bulkSetFees, approvePayment, setFinanceSettings } from './actions';
 import { Badge } from '@/components/Badge';
 
-type Apartment = { id: string; tower: string | null; unit_number: string; monthly_fee: number | null };
+type Apartment = {
+  id: string;
+  tower: string | null;
+  unit_number: string;
+  monthly_fee: number | null;
+};
 type Settings = {
   payment_available_day: number | null;
   payment_due_day: number | null;
@@ -23,7 +28,10 @@ type Payment = {
   apartments: { tower: string | null; unit_number: string } | null;
 };
 
-const STATUS: Record<Payment['status'], { label: string; tone: 'success' | 'neutral' | 'warning' | 'danger' }> = {
+const STATUS: Record<
+  Payment['status'],
+  { label: string; tone: 'success' | 'neutral' | 'warning' | 'danger' }
+> = {
   pending: { label: 'Pendiente', tone: 'neutral' },
   submitted: { label: 'Confirmación enviada', tone: 'warning' },
   received: { label: 'Recibido', tone: 'success' },
@@ -108,8 +116,12 @@ export function FinanceClient({
       const result = await setFinanceSettings(buildingId, {
         payment_available_day: Number(settingsForm.payment_available_day),
         payment_due_day: Number(settingsForm.payment_due_day),
-        late_fee_type: settingsForm.late_fee_type === '' ? null : (settingsForm.late_fee_type as 'flat' | 'percent'),
-        late_fee_amount: settingsForm.late_fee_amount === '' ? null : Number(settingsForm.late_fee_amount),
+        late_fee_type:
+          settingsForm.late_fee_type === ''
+            ? null
+            : (settingsForm.late_fee_type as 'flat' | 'percent'),
+        late_fee_amount:
+          settingsForm.late_fee_amount === '' ? null : Number(settingsForm.late_fee_amount),
       });
       if (!result.ok) setError(result.error);
     });
@@ -183,10 +195,20 @@ export function FinanceClient({
           </div>
           <div className="field" style={{ flex: 1 }}>
             <label>Monto</label>
-            <input type="number" min="0" step="0.01" value={feeAmount} onChange={(e) => setFeeAmount(e.target.value)} />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={feeAmount}
+              onChange={(e) => setFeeAmount(e.target.value)}
+            />
           </div>
           <div className="field" style={{ alignSelf: 'flex-end' }}>
-            <button className="btn btn-inline" onClick={saveFee} disabled={isPending || !feeApartmentId || !feeAmount}>
+            <button
+              className="btn btn-inline"
+              onClick={saveFee}
+              disabled={isPending || !feeApartmentId || !feeAmount}
+            >
               Guardar
             </button>
           </div>
@@ -198,7 +220,11 @@ export function FinanceClient({
           </a>
           <div className="field">
             <label>Subir CSV de cuotas</label>
-            <input type="file" accept=".csv" onChange={(e) => uploadCsv(e.target.files?.[0] ?? null)} />
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => uploadCsv(e.target.files?.[0] ?? null)}
+            />
           </div>
         </div>
       </div>
@@ -215,7 +241,9 @@ export function FinanceClient({
               min="1"
               max="31"
               value={settingsForm.payment_available_day}
-              onChange={(e) => setSettingsForm({ ...settingsForm, payment_available_day: e.target.value })}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, payment_available_day: e.target.value })
+              }
             />
           </div>
           <div className="field" style={{ flex: 1 }}>
@@ -225,7 +253,9 @@ export function FinanceClient({
               min="1"
               max="31"
               value={settingsForm.payment_due_day}
-              onChange={(e) => setSettingsForm({ ...settingsForm, payment_due_day: e.target.value })}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, payment_due_day: e.target.value })
+              }
             />
           </div>
           <div className="field" style={{ flex: 1 }}>
@@ -247,13 +277,15 @@ export function FinanceClient({
                 min="0"
                 step="0.01"
                 value={settingsForm.late_fee_amount}
-                onChange={(e) => setSettingsForm({ ...settingsForm, late_fee_amount: e.target.value })}
+                onChange={(e) =>
+                  setSettingsForm({ ...settingsForm, late_fee_amount: e.target.value })
+                }
               />
             </div>
           )}
           <div className="field" style={{ alignSelf: 'flex-end' }}>
             <button className="btn" onClick={saveSettings} disabled={isPending}>
-              Guardar configuración
+              Guardar
             </button>
           </div>
         </div>
@@ -325,7 +357,9 @@ export function FinanceClient({
                 <td>{p.available_date}</td>
                 <td>{p.due_date}</td>
                 <td>
-                  {(p.status === 'pending' || p.status === 'submitted' || p.status === 'overdue') && (
+                  {(p.status === 'pending' ||
+                    p.status === 'submitted' ||
+                    p.status === 'overdue') && (
                     <button
                       className="btn"
                       style={{ padding: '5px 10px' }}

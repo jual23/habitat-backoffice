@@ -41,12 +41,13 @@ export function AnnouncementsClient({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [attachmentTargets, setAttachmentTargets] = useState<Record<string, File | null>>({});
+  const [attachFile, setAttachFile] = useState<File | null>(null);
 
   function openCreate() {
     setEditingId(null);
     setForm(emptyForm);
     setBannerFile(null);
+    setAttachFile(null);
     setError(null);
     setModalOpen(true);
   }
@@ -55,6 +56,7 @@ export function AnnouncementsClient({
     setEditingId(a.id);
     setForm({ title: a.title, body: a.body, pinned: a.pinned });
     setBannerFile(null);
+    setAttachFile(null);
     setError(null);
     setModalOpen(true);
   }
@@ -87,14 +89,13 @@ export function AnnouncementsClient({
     });
   }
 
-  function uploadAttachment(a: Announcement) {
-    const file = attachmentTargets[a.id];
-    if (!file) return;
+  function uploadAttachment() {
+    if (!editingId || !attachFile) return;
     setError(null);
     startTransition(async () => {
-      const result = await addAttachment(a.id, buildingId, fileFormData(file)!);
+      const result = await addAttachment(editingId, buildingId, fileFormData(attachFile)!);
       if (!result.ok) setError(result.error);
-      else setAttachmentTargets((prev) => ({ ...prev, [a.id]: null }));
+      else setAttachFile(null);
     });
   }
 
@@ -151,27 +152,10 @@ export function AnnouncementsClient({
                     ))}
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
-                  <input
-                    type="file"
-                    style={{ fontSize: 12 }}
-                    onChange={(e) =>
-                      setAttachmentTargets((prev) => ({ ...prev, [a.id]: e.target.files?.[0] ?? null }))
-                    }
-                  />
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => uploadAttachment(a)}
-                    disabled={!attachmentTargets[a.id]}
-                    style={{ padding: '5px 10px', fontSize: 12.5 }}
-                  >
-                    <IconPaperclip width={14} height={14} /> Adjuntar
-                  </button>
-                </div>
               </div>
               <div className="row-actions">
                 <button
-                  className="icon-btn"
+                  className={`icon-btn${a.pinned ? ' pinned' : ''}`}
                   onClick={() => togglePinned(a)}
                   aria-label={a.pinned ? 'Desfijar' : 'Fijar arriba'}
                   title={a.pinned ? 'Desfijar' : 'Fijar arriba'}
@@ -222,6 +206,26 @@ export function AnnouncementsClient({
             label="Fijar arriba — se muestra primero en la lista"
           />
         </div>
+        {editingId && (
+          <div className="field">
+            <label>Adjuntar archivo</label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="file"
+                style={{ fontSize: 12 }}
+                onChange={(e) => setAttachFile(e.target.files?.[0] ?? null)}
+              />
+              <button
+                className="btn btn-secondary"
+                onClick={uploadAttachment}
+                disabled={!attachFile || isPending}
+                style={{ padding: '5px 10px', fontSize: 12.5 }}
+              >
+                <IconPaperclip width={14} height={14} /> Adjuntar
+              </button>
+            </div>
+          </div>
+        )}
         {error && <p className="error-text">{error}</p>}
         <div className="modal-actions">
           <button className="btn btn-secondary" onClick={() => setModalOpen(false)} disabled={isPending}>

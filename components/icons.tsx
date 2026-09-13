@@ -138,8 +138,8 @@ export const IconX = (p: SVGProps<SVGSVGElement>) => base(<path d="M6 6l12 12M18
 export const IconPin = (p: SVGProps<SVGSVGElement>) =>
   base(
     <>
-      <path d="M12 2a5 5 0 0 0-5 5c0 3.5 5 12 5 12s5-8.5 5-12a5 5 0 0 0-5-5z" />
-      <circle cx="12" cy="7" r="2" />
+      <path d="M9 4h6M9 4l.6 6.4L7 13.5V16h10v-2.5l-2.6-3.1L15 4" />
+      <path d="M12 16v4" />
     </>,
     p,
   );
