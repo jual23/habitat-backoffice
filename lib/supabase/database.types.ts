@@ -633,6 +633,7 @@ export type Database = {
           type: Database["public"]["Enums"]["feedback_type"]
           updated_at: string
           user_id: string
+          viewed_at: string | null
         }
         Insert: {
           body?: string
@@ -645,6 +646,7 @@ export type Database = {
           type: Database["public"]["Enums"]["feedback_type"]
           updated_at?: string
           user_id: string
+          viewed_at?: string | null
         }
         Update: {
           body?: string
@@ -657,6 +659,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["feedback_type"]
           updated_at?: string
           user_id?: string
+          viewed_at?: string | null
         }
         Relationships: [
           {
@@ -981,6 +984,7 @@ export type Database = {
           due_date: string
           id: string
           late_fee_amount: number | null
+          rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["payment_status"]
@@ -996,6 +1000,7 @@ export type Database = {
           due_date: string
           id?: string
           late_fee_amount?: number | null
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
@@ -1011,6 +1016,7 @@ export type Database = {
           due_date?: string
           id?: string
           late_fee_amount?: number | null
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
@@ -1553,6 +1559,13 @@ export type Database = {
         Returns: string
       }
       my_building_id: { Args: never; Returns: string }
+      poll_results: {
+        Args: { p_poll_id: string }
+        Returns: {
+          option_id: string
+          vote_count: number
+        }[]
+      }
       purge_discarded_feedback: { Args: never; Returns: undefined }
       storage_building_id: { Args: { _name: string }; Returns: string }
     }
@@ -1564,7 +1577,12 @@ export type Database = {
       late_fee_type: "flat" | "percent"
       maintenance_frequency: "once" | "weekly" | "monthly" | "every_n_months"
       package_status: "pending" | "picked_up"
-      payment_status: "pending" | "submitted" | "received" | "overdue"
+      payment_status:
+        | "pending"
+        | "submitted"
+        | "rejected"
+        | "received"
+        | "overdue"
       reservation_status: "requested" | "approved" | "declined" | "cancelled"
       tenant_type: "resident" | "renter"
       ticket_status:
@@ -1708,7 +1726,13 @@ export const Constants = {
       late_fee_type: ["flat", "percent"],
       maintenance_frequency: ["once", "weekly", "monthly", "every_n_months"],
       package_status: ["pending", "picked_up"],
-      payment_status: ["pending", "submitted", "received", "overdue"],
+      payment_status: [
+        "pending",
+        "submitted",
+        "rejected",
+        "received",
+        "overdue",
+      ],
       reservation_status: ["requested", "approved", "declined", "cancelled"],
       tenant_type: ["resident", "renter"],
       ticket_status: [

@@ -305,6 +305,28 @@ h1 {
   gap: 16px;
 }
 
+/* 016-panel-dashboard-overview: the Panel's top stat-card row. `.grid`'s
+   280px minimum (sized for image-bearing tiles like Facilities) only leaves
+   room for 3 across within `.main`'s 1200px max-width, so these small
+   stat cards get their own, narrower minimum -- 4 fit across a normal
+   desktop viewport, still collapsing to fewer/1 per row on narrow ones. */
+.panel-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* The Panel's two-column layout (activity feed + pending-items summary)
+   below the top stat cards — stacks to one column on narrow viewports the
+   same way `.grid` does, via auto-fit rather than a manual breakpoint. */
+.panel-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+  align-items: start;
+}
+
 .tile {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

@@ -72,6 +72,7 @@ export function SidebarNav({
     : staffOnly
       ? NAV_ITEMS.filter(
           (item) =>
+            item.href === '/panel' || // 016-panel-dashboard-overview (T020, US4)
             item.href === '/visitors' ||
             item.href === '/incidencias' ||
             item.href === '/packages' ||

@@ -62,7 +62,11 @@ export async function updateSession(request: NextRequest) {
       !pathname.startsWith('/packages') &&
       !pathname.startsWith('/maintenance') &&
       !pathname.startsWith('/emergency') &&
-      !pathname.startsWith('/broadcast')
+      !pathname.startsWith('/broadcast') &&
+      // 016-panel-dashboard-overview (T019, US4): the Panel dashboard is not
+      // itself a new module grant -- app/(backoffice)/panel/page.tsx only
+      // ever surfaces data from the modules Staff already has above.
+      !pathname.startsWith('/panel')
     ) {
       const url = request.nextUrl.clone();
       url.pathname = '/visitors';

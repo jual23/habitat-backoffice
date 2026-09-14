@@ -21,7 +21,7 @@ type Payment = {
   apartment_id: string;
   amount: number;
   late_fee_amount: number | null;
-  status: 'pending' | 'submitted' | 'received' | 'overdue';
+  status: 'pending' | 'submitted' | 'rejected' | 'received' | 'overdue';
   available_date: string;
   due_date: string;
   reviewed_at: string | null;
@@ -34,6 +34,14 @@ const STATUS: Record<
 > = {
   pending: { label: 'Pendiente', tone: 'neutral' },
   submitted: { label: 'Confirmación enviada', tone: 'warning' },
+  // 016-panel-dashboard-overview: minimal type-only fix, unrelated to this
+  // feature — regenerating database.types.ts (needed for feedback.viewed_at)
+  // surfaced that the live `payment_status` enum has included 'rejected'
+  // since an earlier migration, but this module's local Payment type and
+  // STATUS lookup were never updated for it. This just keeps the build
+  // green (label + badge tone); no new filter or admin action is added —
+  // that's a separate piece of work for whoever owns the Finance module.
+  rejected: { label: 'Rechazado', tone: 'danger' },
   received: { label: 'Recibido', tone: 'success' },
   overdue: { label: 'Vencido', tone: 'danger' },
 };
