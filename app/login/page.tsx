@@ -26,10 +26,14 @@ export default async function LoginPage() {
       <div className="card card-pad" style={{ width: 360 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
           <div className="sidebar-logo">
-            <IconShield width={20} height={20} />
+            <img
+              src="/icons/icon-512.png"
+              alt=""
+              style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
+            />
           </div>
           <div>
-            <div className="sidebar-title">Habitat</div>
+            <div className="sidebar-title">Aurora</div>
             <div className="sidebar-subtitle">ADMINISTRACIÓN</div>
           </div>
         </div>
